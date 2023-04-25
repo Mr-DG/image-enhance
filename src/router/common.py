@@ -1,10 +1,16 @@
 import json
 import os
-from flask import Blueprint, request, current_app, Flask
+from flask import Blueprint, request, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 import uuid
 
 common = Blueprint('common', __name__)
+
+# hello world
+@common.route('/')
+def hello():
+    print(current_app.config['UPLOAD_FOLDER'])
+    return 'Hello, World!'
 
 
 # 登录
@@ -19,7 +25,7 @@ def login():
     }
 
 
-# 文件上传
+# 所有文件上传
 @common.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
@@ -49,3 +55,17 @@ def upload():
         'msg': '上传成功',
         'url': url
     }
+
+    
+# 访问静态资源路由
+@common.route('/static/<path:filename>')
+def send_image(filename):
+    return send_from_directory(current_app.static_folder, filename)
+
+@common.route('/upload/<path:filename>')
+def send_upload(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+@common.route('/data_set_img/<path:filename>')
+def send_data_set(filename):
+    return send_from_directory(current_app.config['DATA_SET_IMG'], filename)

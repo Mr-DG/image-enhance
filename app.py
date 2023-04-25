@@ -1,32 +1,23 @@
-from flask import Flask, send_from_directory
+from flask import Flask
 from src.router.common import common
+from src.router.data_set import dataset
+from src.db.connect import mysql_connect
+from src.router.enhance import enhance
 
 app = Flask(__name__)
-app.register_blueprint(common, url_prefix='/')
 
+# router
+app.register_blueprint(common, url_prefix='/') # 公共路由
+app.register_blueprint(dataset, url_prefix='/dataset') # 数据集路由
+app.register_blueprint(enhance, url_prefix='/enhance') # 数据集路由
 
-# hello world
-@app.route('/')
-def hello():
-    print(app.config['UPLOAD_FOLDER'])
-    return 'Hello, World!'
+# 链接数据库
+mysql_connect()
 
-
-# 文件上传路径
-# 托管静态资源
-app.config['UPLOAD_FOLDER'] = 'upload/'
-app.static_folder = 'static'
-
-
-@app.route('/static/<path:filename>')
-def send_image(filename):
-    return send_from_directory(app.static_folder, filename)
-
-
-@app.route('/upload/<path:filename>')
-def send_upload(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
+# 托管静态资源路径
+app.config['UPLOAD_FOLDER'] = 'upload/' # 上传文件夹
+app.static_folder = 'static' # 静态资源文件夹
+app.config['DATA_SET_IMG'] = 'data_set_img' # 数据集解压之后图片保存的文件夹
 
 if (__name__ == '__main__'):
     app.run('127.0.0.1', 8090, debug=True)  # debug=True 热更新
