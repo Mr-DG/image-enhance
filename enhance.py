@@ -1,22 +1,28 @@
 import cv2 as cv
 import numpy as np
 import os
+import urllib.parse
+import sys
 
 # 增强前的位置
-src_folder = 'c:\\zed\\image-enhance\\data_set_img\\'
+# src_folder = 'D:\\sofeware\\feiqiu\\gongzuo\\feiq\\Recv Files\\Photos\\'
+# src_folder = 'D:\\zed\\project\\image-enhance\\data_set_img\\'
+# src_folder = 'D:\\zed\\gongsifile\\dataset\\cardata\\q\\JPEGImages\\'
+src_folder = 'D:\\sofeware\\feiqiu\\gongzuo\\feiq\\Recv Files\\huo\\firesmoke\\images\\val\\'
 # 增强后保存的位置
-dst_folder = 'c:\\zed\\image-enhance\\result\\'
+# dst_folder = 'D:\\sofeware\\feiqiu\\gongzuo\\feiq\\Recv Files\\gray' # 灰度
+dst_folder = 'D:\\sofeware\\feiqiu\\gongzuo\\feiq\\Recv Files\\huo\\firesmoke\\images\\abcd' # 压缩
 
 dx, dy = 50, 100        # 平移像素
-angle = 180             # 旋转角度
+angle = 45             # 旋转角度
 kernel_size = (3, 3)    # 模糊值，卷积核大小，越大越模糊
-scale_percent = 50      # 压缩比例，50表示为原来的50%，不能小于1
+scale_percent = 75      # 压缩比例，50表示为原来的50%，不能小于1
 crop_x, crop_y, crop_w, crop_h = 100, 100, 300, 300 # 裁剪，距离左上角的位置xy，裁剪的大小wh
 flip_direction = 'horizontal'  # 翻转方向，horizontal或者vertical，all为两种都要
 factor = 1              # 锐化核为1的时候锐化最高
 gray_level = 256        # 灰度级别，取值范围为[1, 256]
 brightness = -0.3       # 亮度调整值，取值范围为[-1, 1]
-contrast = 150            # 对比度[0, 255]
+contrast = 200            # 对比度[0, 255]
 # saturation_factor = 1   # 饱和度[-1, 1]
 
 # 选择需要执行的处理方法！！！
@@ -50,9 +56,14 @@ def enhance():
     # 获取所有图片
     img_files = get_img_files(src_folder)
     for img_file in img_files:
-        # 执行需要增强的函数
-        for index in enhance_methods:
-            enhance_map[index](img_file)
+        try:
+            # 执行需要增强的函数
+            for index in enhance_methods:
+                enhance_map[index](img_file)
+        except Exception as e:
+            print(f"处理图像时出现错误: {img_file}")
+            print(f"错误信息: {str(e)}")
+            continue
     print('图像增强完成')
 
 # 平移
@@ -145,8 +156,13 @@ def reduce_resolution(img_file, scale_percent):
     返回:
     None
     """
+    with open(img_file, 'rb') as f:
+        img_bytes = f.read()
+
+    img_array = np.asarray(bytearray(img_bytes), dtype=np.uint8)
     # 读取原始图片
-    img = cv.imread(img_file)
+    img = cv.imdecode(img_array, cv.IMREAD_COLOR)
+
 
     # 计算新图片的尺寸
     width = int(img.shape[1] * scale_percent / 100)
@@ -158,8 +174,11 @@ def reduce_resolution(img_file, scale_percent):
 
     # 保存降低像素后的图片
     img_name = os.path.basename(img_file)
+    img_name = urllib.parse.quote(img_name, safe='')
+    img_name = urllib.parse.unquote(img_name, encoding='utf-8')
     dst_path = os.path.join(dst_folder, f"reduce_{img_name}")
-    cv.imwrite(dst_path, img_resized)
+    # 保存图片
+    cv.imencode('.jpg', img_resized)[1].tofile(dst_path)
 
 # 裁剪
 def crop_image(img_file, x, y, w, h):
@@ -282,11 +301,21 @@ def gray_scale(img_file, gray_level=256):
     if not 1 <= gray_level <= 256:
         raise ValueError("灰度级别应取值范围为[1, 256]")
 
+    with open(img_file, 'rb') as f:
+        img_bytes = f.read()
+
+    img_array = np.asarray(bytearray(img_bytes), dtype=np.uint8)
     # 读取原始图片
+
+    # img = cv.imdecode(img_array, cv.IMREAD_COLOR)
     img = cv.imread(img_file)
 
-    # 转换为灰度图像
-    gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    try:
+        # 转换为灰度图像
+        gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    except cv.error:
+        print(f"无法转换图像: {img_file}")
+        return
 
     if gray_level != 256:
         # 将灰度值量化到指定级别
@@ -294,8 +323,11 @@ def gray_scale(img_file, gray_level=256):
 
     # 保存灰度图像
     img_name = os.path.basename(img_file)
+    img_name = urllib.parse.quote(img_name, safe='')
+    img_name = urllib.parse.unquote(img_name, encoding='utf-8')
     dst_path = os.path.join(dst_folder, f"gray_{gray_level}_{img_name}")
-    cv.imwrite(dst_path, gray_img)
+    # 保存图片
+    cv.imencode('.jpg', gray_img)[1].tofile(dst_path)
 
 # 亮度
 def brightness_adjust(img_file, brightness):
